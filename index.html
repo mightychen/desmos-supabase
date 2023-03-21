@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.desmos.com/api/v1.8/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
   <title>Real-Time Aggregation Demo</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
 </head>
@@ -44,6 +45,11 @@
     //   "type": "folder",
     //   "title": "Student Points",
     // })
+
+    // const socket = io('http://localhost:3001')
+    // socket.on('connection')
+    // console.log("emit message...")
+    // socket.emit("message", "hello socket")
   </script>
   <script src="client/websocket_client_desmos.js">
 
