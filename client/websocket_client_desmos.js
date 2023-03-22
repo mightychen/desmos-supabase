@@ -54,7 +54,7 @@ socket.on("point update", (message) => {
   update_list.map( (user) => {
     if (my_uuid !== user.socket_connection_id) {
       Calc.setExpression( {
-        "id": user.id,
+        "id": user.socket_connection_id,
         "latex": `P_{${user.id}}=(${user.mouse_x}, ${user.mouse_y})`,
         "dragMode": Desmos.DragModes.NONE,
         "color": Desmos.Colors.BLACK,
@@ -69,7 +69,7 @@ socket.on("point delete", (message) => {
   delete_list.map( (user) => {
     if (my_uuid !== user.socket_connection_id) {
       Calc.removeExpression( {
-        "id": user.id,
+        "id": user.socket_connection_id,
       })
     }
   })

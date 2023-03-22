@@ -4,6 +4,20 @@ const server = require('http').createServer(app)
 const io = require('socket.io')(server, { cors: { origin: "*" }})
 const { createClient } = require('@supabase/supabase-js')
 
+function getNextID(current_ids) {
+  new_id = 0
+  for (var i = 0; i < current_ids.length; i++) {
+    if (current_ids[i] - (i + 1) !== 0) {
+      new_id = i + 1;
+      break;
+    }
+  }
+  if (new_id == 0) {
+    new_id = current_ids.length + 1
+  }
+  return new_id
+}
+
 const supabase = createClient(
   process.env.SUPABASE_HOST,
   process.env.SUPABASE_ANON_KEY,
@@ -11,6 +25,8 @@ const supabase = createClient(
 
 let update_list = []
 let delete_list = []
+
+// Clear database upon starting the server
 
 supabase
 .channel("public:desmos")
@@ -21,13 +37,21 @@ supabase
       payload.new['time'] = new Date()
       update_list.push(payload.new);
     }
-    // else if (payload.eventType == 'DELETE') {
-    //   // console.log(payload)
-    //   // delete_list.push(payload)
-    // }
+    else if (payload.eventType == 'DELETE') {
+      payload.old['time'] = new Date()
+      delete_list.push(payload.old)
+    }
   }
 )
 .subscribe();
+
+clearDatabase = async () => await supabase
+  .from('desmos')
+  .delete()
+  .gte('id', 0)
+  .then( console.log("Database cleared."))
+
+clearDatabase()
 
 app.set("view engine", "ejs");
 
@@ -50,6 +74,8 @@ io.on("connection", async (socket) => {
     .select()
 
 
+  new_id = getNextID(data.map( (row) => row.id))
+
   // Add user to the database upon init
   const { error } = await supabase
     .from('desmos')
@@ -58,7 +84,7 @@ io.on("connection", async (socket) => {
       mouse_x: 0,
       mouse_y: 0,
       room_id: "TEMP",
-      id: data.length + 1
+      id: new_id
     })
 
 
@@ -80,16 +106,6 @@ io.on("connection", async (socket) => {
 
   // When a user disconnects, remove them from the database
   socket.on("disconnect", async () => {
-    // Get point ID before deleting
-    const { data, selectError } = await supabase
-      .from('desmos')
-      .select()
-      .eq('socket_connection_id', socket.id)
-
-    if (data.length > 0) {
-      data[0]['time'] = new Date()
-      delete_list.push(data[0])
-    }
 
     const { error } = await supabase
       .from('desmos')
@@ -130,10 +146,11 @@ io.on("connection", async (socket) => {
 
     update_list = process_update_list(update_list)
     delete_list = process_delete_list(delete_list)
-
-    socket.emit("point update", {
-      update_list: update_list
-    })
+    if (update_list.length > 0) {
+      socket.emit("point update", {
+        update_list: update_list
+      })
+    }
 
     if (delete_list.length > 0) {
       // console.log(processed_delete_list)
