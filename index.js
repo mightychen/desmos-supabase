@@ -29,31 +29,6 @@ supabase
 )
 .subscribe();
 
-
-// const channel = supabase.channel('test')
-//
-// channel
-// .on('broadcast', {event: 'cursor-pos'}, (payload) => {
-//   console.log("34", "Received Message!")
-//   console.log(payload)
-// })
-//
-// channel
-// .subscribe( (status) => {
-//   if (status === 'SUBSCRIBED') {
-//     // now you can start broadcasting cursor positions
-//     setInterval(() => {
-//       channel.send({
-//         type: 'broadcast',
-//         event: 'cursor-pos',
-//         payload: { x: Math.random(), y: Math.random() },
-//       })
-//       console.log(status)
-//     }, 100)
-//   }
-// })
-
-
 app.set("view engine", "ejs");
 
 app.get("/", (req, res) => {
@@ -66,6 +41,15 @@ server.listen(3001, () => {
 
 io.on("connection", async (socket) => {
   console.log("User ID connected: " + socket.id)
+
+  // Grab all existing users and send them to the client to initialize points
+  // Used to also determine the id of each point
+  // TODO: add filter on room_id
+  const { data, selectError } = await supabase
+    .from('desmos')
+    .select()
+
+
   // Add user to the database upon init
   const { error } = await supabase
     .from('desmos')
@@ -74,13 +58,9 @@ io.on("connection", async (socket) => {
       mouse_x: 0,
       mouse_y: 0,
       room_id: "TEMP",
+      id: data.length + 1
     })
 
-  // Grab all existing users and send them to the client to initialize points
-  // TODO: add filter on room_id
-  const { data, selectError } = await supabase
-    .from('desmos')
-    .select()
 
   socket.emit("point update", {
     update_list: data
