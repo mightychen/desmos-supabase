@@ -63,6 +63,18 @@ socket.on("point update", (message) => {
   })
 })
 
+socket.on("point delete", (message) => {
+  delete_list = message.delete_list
+
+  delete_list.map( (user) => {
+    if (my_uuid !== user.socket_connection_id) {
+      Calc.removeExpression( {
+        "id": user.id,
+      })
+    }
+  })
+})
+
 
 
 function create_web_socket_connection() {

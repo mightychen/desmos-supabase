@@ -10,13 +10,21 @@ const supabase = createClient(
 );
 
 let update_list = []
+let delete_list = []
 
 supabase
 .channel("public:desmos")
 .on(
   "postgres_changes",
   { event: "*", schema: "public", table: "desmos" }, (payload) => {
-    update_list.push(payload.new)
+    if ((payload.eventType === 'INSERT') || (payload.eventType === 'UPDATE')) {
+      payload.new['time'] = new Date()
+      update_list.push(payload.new);
+    }
+    // else if (payload.eventType == 'DELETE') {
+    //   // console.log(payload)
+    //   // delete_list.push(payload)
+    // }
   }
 )
 .subscribe();
@@ -90,6 +98,25 @@ io.on("connection", async (socket) => {
       .eq('socket_connection_id', message.uuid)
   })
 
+  // When a user disconnects, remove them from the database
+  socket.on("disconnect", async () => {
+    // Get point ID before deleting
+    const { data, selectError } = await supabase
+      .from('desmos')
+      .select()
+      .eq('socket_connection_id', socket.id)
+
+    if (data.length > 0) {
+      data[0]['time'] = new Date()
+      delete_list.push(data[0])
+    }
+
+    const { error } = await supabase
+      .from('desmos')
+      .delete()
+      .eq('socket_connection_id', socket.id)
+  })
+
   function process_update_list(update_list) {
     processed_list_dict = {}
     // This should be in chronological order, so we squash any messages
@@ -97,13 +124,43 @@ io.on("connection", async (socket) => {
     update_list.map( (update_message) => {
       processed_list_dict[update_message.socket_connection_id] = update_message
     })
-    return Object.values(processed_list_dict)
+
+    // Filter out old messages
+    processed_update_list = Object.values(processed_list_dict)
+
+    current_time = new Date().getTime()
+    final_update_list = processed_update_list.filter( (row) => {
+      return current_time < row.time.getTime() + 1000
+    })
+
+    return final_update_list
+  }
+
+  function process_delete_list(delete_list) {
+    current_time = new Date().getTime()
+
+    updated_delete_list = delete_list.filter( (row) => {
+      return current_time < row.time.getTime() + 1000
+    })
+    return updated_delete_list
   }
 
   setInterval( () => {
-    processed_udpate_list = process_update_list(update_list)
+    // console.log(delete_list)
+
+    update_list = process_update_list(update_list)
+    delete_list = process_delete_list(delete_list)
+
     socket.emit("point update", {
-      update_list: processed_udpate_list
+      update_list: update_list
     })
-  }, 10)
+
+    if (delete_list.length > 0) {
+      // console.log(processed_delete_list)
+      socket.emit("point delete", {
+        delete_list: delete_list
+      })
+    }
+
+  }, 100)
 })
