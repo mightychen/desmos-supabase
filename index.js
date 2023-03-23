@@ -35,6 +35,7 @@ const initalState = {
 }
 
 function getNextID(current_ids) {
+  console.log(current_ids)
   new_id = 0
   for (var i = 0; i < current_ids.length; i++) {
     if (current_ids[i] - (i + 1) !== 0) {
@@ -103,7 +104,7 @@ io.on("connection", async (socket) => {
     .select()
 
 
-  new_id = getNextID(data.map( (row) => row.id))
+  new_id = getNextID(data.map( (row) => row.id).sort())
 
   // Add user to the database upon init
   const { error } = await supabase
