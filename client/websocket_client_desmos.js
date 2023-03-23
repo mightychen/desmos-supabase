@@ -16,6 +16,13 @@ socket.on('connect', () => {
   var buttonStop = document.getElementById("stop-websocket")
   buttonStop.style.display = "inline"
 
+})
+
+socket.on("init", (message) => {
+  console.log(message)
+  init_state = message.init_state
+  Calc.setState(init_state)
+
   // Create a draggable point for myself
   Calc.setExpression({
     "id": 'my-point',
@@ -58,6 +65,14 @@ socket.on("point update", (message) => {
         "latex": `P_{${user.id}}=(${user.mouse_x}, ${user.mouse_y})`,
         "dragMode": Desmos.DragModes.NONE,
         "color": Desmos.Colors.BLACK,
+      })
+    } else {
+      Calc.setExpression( {
+        "id": user.socket_connection_id,
+        "latex": `P_{${user.id}}=P_{Me}`,
+        "dragMode": Desmos.DragModes.NONE,
+        "color": Desmos.Colors.BLACK,
+        "hidden": true
       })
     }
   })

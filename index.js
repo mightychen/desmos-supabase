@@ -4,6 +4,36 @@ const server = require('http').createServer(app)
 const io = require('socket.io')(server, { cors: { origin: "*" }})
 const { createClient } = require('@supabase/supabase-js')
 
+const initalState = {
+    "version": 10,
+    "randomSeed": "1d934f054c2848c02cbc452cd862b903",
+    "graph": {
+        "viewport": {
+            "xmin": -10,
+            "ymin": -10,
+            "xmax": 10,
+            "ymax": 10
+        }
+    },
+    "expressions": {
+        "list": [
+            {
+                "type": "folder",
+                "id": "2",
+                "title": "Polygon Between Points",
+                "secret": true
+            },
+            {
+                "type": "expression",
+                "id": "3",
+                "folderId": "2",
+                "color": "#2d70b3",
+                "latex": "\\operatorname{polygon}\\left(P_{1},P_{2},P_{3},P_{4}\\right)"
+            }
+        ]
+    }
+}
+
 function getNextID(current_ids) {
   new_id = 0
   for (var i = 0; i < current_ids.length; i++) {
@@ -27,7 +57,6 @@ let update_list = []
 let delete_list = []
 
 // Clear database upon starting the server
-
 supabase
 .channel("public:desmos")
 .on(
@@ -87,6 +116,9 @@ io.on("connection", async (socket) => {
       id: new_id
     })
 
+  socket.emit("init", {
+    init_state: initalState
+  })
 
   socket.emit("point update", {
     update_list: data
