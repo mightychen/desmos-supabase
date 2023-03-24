@@ -17,6 +17,10 @@ const init_state_url = "https://saved-work.desmos.com/calc-states/production/i6o
 if (PRODUCTION) {
   key = fs.readFileSync('private.key')
   cert = fs.readFileSync('certificate.crt')
+  let cred = {
+    key,
+    cert
+  }
   httpsServer = https.createServer(cred,app)
   httpsServer.listen(8443, '0.0.0.0');
 }
