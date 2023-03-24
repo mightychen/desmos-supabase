@@ -68,16 +68,18 @@ clearDatabase = async () => await supabase
   .gte('id', 0)
   .then( console.log("Database cleared."))
 
+let initialState;
 initialStateCall = async () => await fetch(init_state_url)
   .then( (response) => response.json())
   .then( (responseJson) => {
-    console.log(responseJson)
-    return responseJson
+    initialState = responseJson
+    // return responseJson
   })
 
 
 clearDatabase()
-initialState = initialStateCall()
+initialStateCall()
+
 
 app.set("view engine", "ejs");
 
@@ -114,7 +116,7 @@ io.on("connection", async (socket) => {
     })
 
   socket.emit("init", {
-    init_state: initalState
+    init_state: initialState
   })
 
   socket.emit("point update", {

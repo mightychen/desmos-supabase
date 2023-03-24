@@ -1,7 +1,7 @@
 var my_uuid = ""
 var initialized = false
 
-const socket = io('https://ec2-52-14-66-122.us-east-2.compute.amazonaws.com')
+const socket = io('http://localhost:3001')
 socket.on('connect', () => {
   my_uuid = socket.id
   // Clean up any Variables
