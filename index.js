@@ -120,9 +120,9 @@ io.on("connection", async (socket) => {
       id: new_id
     })
 
-  // socket.emit("init", {
-  //   init_state: initialState
-  // })
+  socket.emit("init", {
+    // init_state: initialState
+  })
 
   socket.emit("point update", {
     update_list: data
