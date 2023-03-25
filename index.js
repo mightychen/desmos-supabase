@@ -12,7 +12,7 @@ let key;
 let cert;
 let httpsServer;
 
-const init_state_url = "https://saved-work.desmos.com/calc-states/production/i6ovjlu7yi"
+// const init_state_url = "https://saved-work.desmos.com/calc-states/production/i6ovjlu7yi"
 
 if (PRODUCTION) {
   key = fs.readFileSync('private.key')
@@ -72,17 +72,18 @@ clearDatabase = async () => await supabase
   .gte('id', 0)
   .then( console.log("Database cleared."))
 
-let initialState;
-initialStateCall = async () => await fetch(init_state_url)
-  .then( (response) => response.json())
-  .then( (responseJson) => {
-    initialState = responseJson
-    // return responseJson
-  })
+// Moved this to the client side
+// let initialState;
+// initialStateCall = async () => await fetch(init_state_url)
+//   .then( (response) => response.json())
+//   .then( (responseJson) => {
+//     initialState = responseJson
+//     // return responseJson
+//   })
 
 
 clearDatabase()
-initialStateCall()
+// initialStateCall()
 
 
 app.set("view engine", "ejs");
@@ -119,9 +120,9 @@ io.on("connection", async (socket) => {
       id: new_id
     })
 
-  socket.emit("init", {
-    init_state: initialState
-  })
+  // socket.emit("init", {
+  //   init_state: initialState
+  // })
 
   socket.emit("point update", {
     update_list: data
