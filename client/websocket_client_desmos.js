@@ -5,13 +5,16 @@ let url = new URLSearchParams(window.location.search).get('url')
 
 let initialState;
 let initialStateURL = "https://saved-work.desmos.com/calc-states/production/" + url
-initialStateCall = async () => await fetch(initialStateURL)
-  .then( (response) => response.json())
-  .then( (responseJson) => {
-    initialState = responseJson
-    Calc.setState(initialState)
-  })
-initialStateCall()
+
+if (url !== null) {
+  initialStateCall = async () => await fetch(initialStateURL)
+    .then( (response) => response.json())
+    .then( (responseJson) => {
+      initialState = responseJson
+      Calc.setState(initialState)
+    })
+  initialStateCall()
+}
 
 const socket = io('https://ec2-52-14-66-122.us-east-2.compute.amazonaws.com')
 socket.on('connect', () => {
