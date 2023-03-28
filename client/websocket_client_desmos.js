@@ -11,18 +11,16 @@ if (url !== null) {
     .then( (response) => response.json())
     .then( (responseJson) => {
       initialState = responseJson
+      console.log("setting calc state!")
       Calc.setState(initialState)
     })
   initialStateCall()
 }
 
-const socket = io('https://ec2-52-14-66-122.us-east-2.compute.amazonaws.com')
+const socket = io('https://ec2-52-14-66-122.us-east-2.compute.amazonaws.com', {query: `url=${url}`})
 socket.on('connect', () => {
   my_uuid = socket.id
-  // Clean up any Variables
-  for (var i = 0; i < 10; i++) {
-    Calc.removeExpression({id: `P_{${i}}`});
-  }
+
   // Update Button State to indicate connected
   document.getElementById("status-icon").className = "bi bi-record-fill"
   document.getElementById("status-icon").style.color = "red"
@@ -31,14 +29,7 @@ socket.on('connect', () => {
   var buttonStop = document.getElementById("stop-websocket")
   buttonStop.style.display = "inline"
 
-})
-
-socket.on("init", (message) => {
-  // console.log(message)
-  // init_state = message.init_state
-  // Calc.setState(init_state)
-
-  // Create a draggable point for myself
+  console.log("creating expression for myself!")
   Calc.setExpression({
     "id": 'my-point',
     "latex": 'P_{Me}=(0,0)',
@@ -71,38 +62,34 @@ socket.on("init", (message) => {
 })
 
 socket.on("point update", (message) => {
-  update_list = message.update_list
+  update = message.update
 
-  update_list.map( (user) => {
-    if (my_uuid !== user.socket_connection_id) {
-      Calc.setExpression( {
-        "id": user.socket_connection_id,
-        "latex": `P_{${user.id}}=(${user.mouse_x}, ${user.mouse_y})`,
-        "dragMode": Desmos.DragModes.NONE,
-        "color": Desmos.Colors.BLACK,
-      })
-    } else {
-      Calc.setExpression( {
-        "id": user.socket_connection_id,
-        "latex": `P_{${user.id}}=P_{Me}`,
-        "dragMode": Desmos.DragModes.NONE,
-        "color": Desmos.Colors.BLACK,
-        "hidden": true
-      })
-    }
-  })
+  // console.log("update", update)
+
+  if (my_uuid !== update.socket_connection_id) {
+    Calc.setExpression( {
+      "id": update.socket_connection_id,
+      "latex": `P_{${update.id}}=(${update.mouse_x}, ${update.mouse_y})`,
+      "dragMode": Desmos.DragModes.NONE,
+      "color": Desmos.Colors.BLACK,
+    })
+  } else {
+    Calc.setExpression( {
+      "id": update.socket_connection_id,
+      "latex": `P_{${update.id}}=P_{Me}`,
+      "dragMode": Desmos.DragModes.NONE,
+      "color": Desmos.Colors.BLACK,
+      "hidden": true
+    })
+  }
 })
 
 socket.on("point delete", (message) => {
-  delete_list = message.delete_list
-
-  delete_list.map( (user) => {
-    if (my_uuid !== user.socket_connection_id) {
-      Calc.removeExpression( {
-        "id": user.socket_connection_id,
-      })
-    }
-  })
+  if (my_uuid !== message.socket_connection_id) {
+    Calc.removeExpression( {
+      "id": message.socket_connection_id,
+    })
+  }
 })
 
 socket.on("disconnect", (reason) => {

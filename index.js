@@ -26,7 +26,6 @@ if (PRODUCTION) {
 }
 
 function getNextID(current_ids) {
-  console.log(current_ids)
   new_id = 0
   for (var i = 0; i < current_ids.length; i++) {
     if (current_ids[i] - (i + 1) !== 0) {
@@ -55,12 +54,14 @@ supabase
   "postgres_changes",
   { event: "*", schema: "public", table: "desmos" }, (payload) => {
     if ((payload.eventType === 'INSERT') || (payload.eventType === 'UPDATE')) {
-      payload.new['time'] = new Date()
-      update_list.push(payload.new);
+      io
+        .to(payload.new.room_id)
+        .emit("point update", {
+        update: payload.new
+      })
     }
     else if (payload.eventType == 'DELETE') {
-      payload.old['time'] = new Date()
-      delete_list.push(payload.old)
+      // console.log(payload)
     }
   }
 )
@@ -72,19 +73,7 @@ clearDatabase = async () => await supabase
   .gte('id', 0)
   .then( console.log("Database cleared."))
 
-// Moved this to the client side
-// let initialState;
-// initialStateCall = async () => await fetch(init_state_url)
-//   .then( (response) => response.json())
-//   .then( (responseJson) => {
-//     initialState = responseJson
-//     // return responseJson
-//   })
-
-
 clearDatabase()
-// initialStateCall()
-
 
 app.set("view engine", "ejs");
 
@@ -99,12 +88,17 @@ server.listen(3001, () => {
 io.on("connection", async (socket) => {
   console.log("User ID connected: " + socket.id)
 
+  // room id is the URL of the Desmos graph
+  let room_id = socket.request._query['url']
+  socket.join(room_id)
+
   // Grab all existing users and send them to the client to initialize points
   // Used to also determine the id of each point
   // TODO: add filter on room_id
   const { data, selectError } = await supabase
     .from('desmos')
     .select()
+    .eq('room_id', room_id)
 
 
   new_id = getNextID(data.map( (row) => row.id).sort())
@@ -116,21 +110,21 @@ io.on("connection", async (socket) => {
       socket_connection_id: socket.id,
       mouse_x: 0,
       mouse_y: 0,
-      room_id: "TEMP",
+      room_id: room_id,
       id: new_id
     })
 
-  socket.emit("init", {
-    // init_state: initialState
+  data.map( (update) => {
+    io
+      .to(room_id)
+      .emit("point update", {
+      update: update
+    })
   })
 
-  socket.emit("point update", {
-    update_list: data
-  })
 
   // Upon receiving a message from the client, send an update to the database
   socket.on("message", async (message) => {
-    // console.log(message)
     const { error } = await supabase
       .from('desmos')
       .update({
@@ -141,7 +135,16 @@ io.on("connection", async (socket) => {
   })
 
   // When a user disconnects, remove them from the database
-  socket.on("disconnect", async () => {
+  socket.on("disconnecting", async () => {
+
+    let rooms = Array.from(socket.rooms)
+    rooms.map( (room) => {
+      io
+      .to(room)
+      .emit("point delete", {
+        socket_connection_id: socket.id
+      })
+    })
 
     const { error } = await supabase
       .from('desmos')
@@ -149,51 +152,4 @@ io.on("connection", async (socket) => {
       .eq('socket_connection_id', socket.id)
   })
 
-  function process_update_list(update_list) {
-    processed_list_dict = {}
-    // This should be in chronological order, so we squash any messages
-    // by iterative over all update messages
-    update_list.map( (update_message) => {
-      processed_list_dict[update_message.socket_connection_id] = update_message
-    })
-
-    // Filter out old messages
-    processed_update_list = Object.values(processed_list_dict)
-
-    current_time = new Date().getTime()
-    final_update_list = processed_update_list.filter( (row) => {
-      return current_time < row.time.getTime() + 1000
-    })
-
-    return final_update_list
-  }
-
-  function process_delete_list(delete_list) {
-    current_time = new Date().getTime()
-
-    updated_delete_list = delete_list.filter( (row) => {
-      return current_time < row.time.getTime() + 1000
-    })
-    return updated_delete_list
-  }
-
-  setInterval( () => {
-    // console.log(delete_list)
-
-    update_list = process_update_list(update_list)
-    delete_list = process_delete_list(delete_list)
-    if (update_list.length > 0) {
-      socket.emit("point update", {
-        update_list: update_list
-      })
-    }
-
-    if (delete_list.length > 0) {
-      // console.log(processed_delete_list)
-      socket.emit("point delete", {
-        delete_list: delete_list
-      })
-    }
-
-  }, 100)
 })
